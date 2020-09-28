@@ -1,0 +1,40 @@
+* Library
+** installation de NuGet pour récupérer les packages
+https://docs.microsoft.com/en-us/nuget/install-nuget-client-tools#nugetexe-cli
+1) Install Mono 4.4.2 or later.
+
+2) Execute the following command at a shell prompt:
+Bash
+
+# Download the latest stable `nuget.exe` to `/usr/local/bin`
+$>sudo curl -o /usr/local/bin/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+
+3) Create an alias by adding the following script to the appropriate file for your OS (typically ~/.bash_aliases or ~/.bash_profile):
+Bash
+
+# Create as alias for nuget
+$>alias nuget="mono /usr/local/bin/nuget.exe"
+
+4) Reload the shell. Test the installation by entering nuget with no parameters. NuGet CLI help should display.
+
+5) Add a source
+$>nuget source Add -Name "nuget.org" -Source "https://api.nuget.org/v3/index.json"
+
+** update/install Packages
+dans Libraries/RosBridgeClient
+$>mkdir ../packages
+$>nuget install packages.config -OutputDirectory ../packages
+** compile
+dans Libraries/RosBridgeClient
+$>msbuild
+create *.dll in Libraries/RosBridgeClient/bin/Debug/ (because of implicit Target Debug ?)
+* RosTest
+Pour tester closing event
+** Create my own test (tester que OnClose est bien appelé)
+$>mkdir RosTest
+[run rosbridge]
+$>mono bin/Debug/RosTest.exe
+** Event as System.EventHandler
+https://stackoverflow.com/questions/803242/understanding-events-and-event-handlers-in-c-sharp
+The standard form for "callback" function for Event is
+void OnClosed(object sender, EventArgs e)

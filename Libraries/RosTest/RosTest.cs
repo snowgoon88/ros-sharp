@@ -7,23 +7,24 @@ using std_msgs = RosSharp.RosBridgeClient.MessageTypes.Std;
 // on ROS system:
 // launch before starting:
 // roslaunch rosbridge_server rosbridge_websocket.launch
-// rostopic echo /publication_test
-
+// rostopic echo /pub_test
+// rostopic pub /sub_test std_msgs/String "subscription test message data"
 namespace RosSharp
 {
     class RosTest
     {
         private RosSocket rosSocket;
         private string Uri = "ws://127.0.0.1:9090";
-        private string rosId;
-
+        private string pubId;
+        private string subId;
+        private RosBridgeClient.Protocols.IProtocol protocol;
         public void Setup()
         {
             Console.WriteLine("__Setup");
             // Create a RosSocket with the WebSocketNetProtocol
             // Work also with default Serializer
             // Need a protocol to attach Event
-            RosBridgeClient.Protocols.IProtocol protocol = new RosBridgeClient.Protocols.WebSocketNetProtocol(Uri);
+            protocol = new RosBridgeClient.Protocols.WebSocketNetProtocol(Uri);
             rosSocket = new RosSocket(protocol, RosSocket.SerializerEnum.Newtonsoft_JSON );
             protocol.OnConnected += OnConnected;
             protocol.OnReceive += OnReceived;
@@ -31,20 +32,61 @@ namespace RosSharp
             Thread.Sleep(100);
             Console.WriteLine("  done");
         }
+
+        public void CloseConnection()
+        {
+            Console.WriteLine("  Closing");
+            rosSocket.Close();
+        }
+        public void Reconnect()
+        {
+            Console.WriteLine("  Reconnecting");
+            protocol.Connect();
+        }
+
+
         public void Publicationtest( string msg )
         {
             Console.WriteLine("__PublicationTest"+msg);
-            //string id = rosSocket.Advertise<std_msgs.String>("/publication_test");
-            rosId = rosSocket.Advertise<std_msgs.String>("/publication_test");
+            IsAlive();
+            //string id = rosSocket.Advertise<std_msgs.String>("/pub_test");
+            pubId = rosSocket.Advertise<std_msgs.String>("/pub_test");
             std_msgs.String message = new std_msgs.String
             {
-                data = "publication test message data"
+                data = "publication test message data" + msg
             };
-            rosSocket.Publish(rosId, message);
+
+            rosSocket.Publish(pubId, message);
             Thread.Sleep(100);
-            Console.WriteLine("  done id="+rosId);
+            Console.WriteLine("  done id="+pubId);
+        }
+        public void SubscriptionTest( string msg )
+        {
+            Console.WriteLine("__SubscriptionTest" + msg);
+            IsAlive();
+            subId = rosSocket.Subscribe<std_msgs.String>("/sub_test", SubscriptionHandler);
+
+        }
+        private void SubscriptionHandler(std_msgs.String message)
+        {
+            Console.WriteLine("Received: " + message.data);
         }
 
+        // ------------------------------------------------------------- IsAlive
+        bool IsAlive()
+        {
+            if( protocol.IsAlive() )
+            {
+                Console.WriteLine("++ still Alive");
+                return true;
+            }
+            else
+            {
+               Console.WriteLine("-- NOT Alive");
+                return false; 
+            }
+        }
+        
         // ------------------------------------------------------ Event callback
         void OnConnected(object sender, EventArgs e)
         {
@@ -71,7 +113,8 @@ namespace RosSharp
         public void TearDown()
         {
             Console.WriteLine("__TearDown");
-            rosSocket.Unadvertise( rosId);
+            rosSocket.Unadvertise( pubId);
+            rosSocket.Unsubscribe( subId);
             Thread.Sleep(100);
 
             rosSocket.Close();
@@ -82,13 +125,35 @@ namespace RosSharp
             Console.WriteLine("***** RosTest *****");
             RosTest app = new RosTest();
             app.Setup();
+            app.SubscriptionTest( " listening" );
             for (int i = 0; i < 20; ++i)
             {
                 app.Publicationtest( String.Format( " try_{0:D2}", i));
                 Thread.Sleep(1000);
             }
-            app.TearDown();
+
+            app.CloseConnection();
+            Thread.Sleep(3000);
+            app.Setup();
+            app.SubscriptionTest( " listening again" );
             Thread.Sleep(1000);
+            for (int i = 0; i < 20; ++i)
+            {
+                app.Publicationtest( String.Format( " try_{0:D2}", i));
+                Thread.Sleep(1000);
+            }
+
+            app.CloseConnection();
+            Thread.Sleep(1000);
+            for (int i = 0; i < 20; ++i)
+            {
+                app.Publicationtest( String.Format( " try_{0:D2}", i));
+                Thread.Sleep(1000);
+            }
+            
+            
+            app.TearDown();
+            Thread.Sleep(2000);
         }
     }
 }

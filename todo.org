@@ -28,7 +28,7 @@ $>nuget install packages.config -OutputDirectory ../packages
 dans Libraries/RosBridgeClient
 $>msbuild
 create *.dll in Libraries/RosBridgeClient/bin/Debug/ (because of implicit Target Debug ?)
-* RosTest
+* [1/1] RosTest
 Pour tester closing event
 ** Create my own test (tester que OnClose est bien appelé)
 $>mkdir RosTest
@@ -38,3 +38,12 @@ $>mono bin/Debug/RosTest.exe
 https://stackoverflow.com/questions/803242/understanding-events-and-event-handlers-in-c-sharp
 The standard form for "callback" function for Event is
 void OnClosed(object sender, EventArgs e)
+** Check Alive
+the RosBridgeClient.Protocols.IProtocol allow to check the connection IsAlive.
+=> could watch on Update or FixedUpdate and Close ?
+?? Effect on Publishers and Subscribers ?
+Publisher : souvent pd FixedUpdate.
+Subscriber : pd Update, overide ReceiveMessage
+** DONE Connect, Publish, Close, Connect, Publish
+ca marche. Mais, dans RosSharp, il faudrait empêcher les Publisher d'essayer de faire des Send => System.Exception dans ros-sharp/Libraries/RosBridgeClient/Protocols/WebSocketNetProtocol::Send(ArraySegment<bute> msg)
+
